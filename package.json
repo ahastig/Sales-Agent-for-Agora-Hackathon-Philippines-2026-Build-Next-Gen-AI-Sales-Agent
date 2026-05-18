@@ -1,0 +1,62 @@
+{
+  "name": "next-gen-ai-sales-agent",
+  "version": "1.0.0",
+  "description": "A deployable AI sales agent workspace with lead intelligence, outreach automation, and a backend API.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "build:pages": "GITHUB_PAGES=true npm run build",
+    "deploy:pages": "npm run build:pages && gh-pages -d dist -b gh-pages -m \"Deploy AI sales agent to GitHub Pages\"",
+    "preview": "vite preview --host 0.0.0.0",
+    "server:dev": "tsx backend/server.ts",
+    "server:start": "tsx backend/server.ts",
+    "check": "eslint . && tsc -b"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahastig/Sales-Agent-for-Agora-Hackathon-Philippines-2026-Build-Next-Gen-AI-Sales-Agent.git"
+  },
+  "keywords": [
+    "ai",
+    "sales",
+    "crm",
+    "lead-scoring",
+    "github-pages"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ahastig/Sales-Agent-for-Agora-Hackathon-Philippines-2026-Build-Next-Gen-AI-Sales-Agent/issues"
+  },
+  "homepage": "https://ahastig.github.io/Sales-Agent-for-Agora-Hackathon-Philippines-2026-Build-Next-Gen-AI-Sales-Agent/",
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "lucide-react": "^1.16.0",
+    "pg": "^8.21.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tsx": "^4.22.2",
+    "vite": "^8.0.13",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.0",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^10.4.0",
+    "gh-pages": "^6.3.0",
+    "globals": "^17.6.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4"
+  }
+}
