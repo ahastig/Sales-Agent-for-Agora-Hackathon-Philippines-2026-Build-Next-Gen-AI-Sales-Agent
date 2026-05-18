@@ -57,3 +57,11 @@ The static site is generated in `dist/` and can be hosted by GitHub Pages.
 ## Deployment
 
 The repository includes `.github/workflows/deploy.yml`, which builds and deploys the static frontend to GitHub Pages on pushes to `main` and the feature branch used for this implementation. The frontend works on GitHub Pages without a server by using the local AI engine; the backend can be deployed separately to any Node-compatible host.
+
+If this is the repository's first Pages deployment, enable GitHub Pages once in repository settings:
+
+1. Open **Settings > Pages**.
+2. Set **Build and deployment > Source** to **GitHub Actions**.
+3. Re-run the `Deploy to GitHub Pages` workflow.
+
+After that one-time setting, deployments publish to the live URL above.
