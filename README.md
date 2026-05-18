@@ -54,6 +54,12 @@ npm run build
 
 The static site is generated in `dist/` and can be hosted by GitHub Pages.
 
+For a project-page build with the correct asset base path:
+
+```bash
+npm run build:pages
+```
+
 ## Deployment
 
 The repository includes `.github/workflows/deploy.yml`, which builds and deploys the static frontend to GitHub Pages on pushes to `main` and the feature branch used for this implementation. The frontend works on GitHub Pages without a server by using the local AI engine; the backend can be deployed separately to any Node-compatible host.
@@ -65,3 +71,9 @@ If this is the repository's first Pages deployment, enable GitHub Pages once in 
 3. Re-run the `Deploy to GitHub Pages` workflow.
 
 After that one-time setting, deployments publish to the live URL above.
+
+For branch-based Pages, publish the already configured static build with:
+
+```bash
+npm run deploy:pages
+```

@@ -6,7 +6,7 @@ const repositoryName =
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.GITHUB_ACTIONS ? `/${repositoryName}/` : '/',
+  base: process.env.GITHUB_ACTIONS || process.env.GITHUB_PAGES ? `/${repositoryName}/` : '/',
   server: {
     port: 5173,
   },
