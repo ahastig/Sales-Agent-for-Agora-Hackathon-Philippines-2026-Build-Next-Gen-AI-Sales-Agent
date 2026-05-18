@@ -49,6 +49,17 @@ export interface Deal {
   nextStep: string;
 }
 
+export interface Activity {
+  id: string;
+  leadId: string;
+  type: 'note' | 'email' | 'call' | 'meeting' | 'task';
+  title: string;
+  body: string;
+  dueAt: string;
+  completed: boolean;
+  createdAt: string;
+}
+
 export interface AgentResponse {
   analysis: LeadAnalysis;
   outreach: OutreachSequence;
@@ -62,4 +73,10 @@ export interface ChatMessage {
 
 export interface AgentSettings {
   backendUrl: string;
+}
+
+export interface WorkspaceData {
+  leads: LeadProfile[];
+  deals: Deal[];
+  activities: Activity[];
 }

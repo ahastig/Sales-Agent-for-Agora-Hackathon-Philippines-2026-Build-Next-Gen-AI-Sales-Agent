@@ -1,4 +1,5 @@
 import type { AgentResponse, ChatMessage, LeadAnalysis, LeadProfile, OutreachSequence } from '../types';
+import { hasEnoughDataForAgent } from './records';
 
 const money = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -7,6 +8,18 @@ const money = new Intl.NumberFormat('en-US', {
 });
 
 export function analyzeLead(lead: LeadProfile): LeadAnalysis {
+  if (!hasEnoughDataForAgent(lead)) {
+    return {
+      score: 0,
+      temperature: 'Cold',
+      fitSummary: 'Add a real lead name, company, and pain points before running qualification.',
+      buyingSignals: [],
+      risks: ['Insufficient first-party lead data. The agent will not infer or invent account details.'],
+      recommendedNextStep: 'Enter verified lead details or connect the backend database before generating guidance.',
+      crmSummary: 'No CRM summary generated because required lead fields are missing.',
+    };
+  }
+
   const painStrength = Math.min(100, lead.painPoints.length * 1.8 + lead.notes.length * 0.4);
   const budgetScore = Math.min(100, lead.budget / 1000);
   const authorityScore = lead.decisionPower * 10;
@@ -22,12 +35,11 @@ export function analyzeLead(lead: LeadProfile): LeadAnalysis {
 
   const temperature = score >= 75 ? 'Hot' : score >= 50 ? 'Warm' : 'Cold';
   const buyingSignals = [
-    `${lead.company} is actively discussing ${lead.painPoints.toLowerCase() || 'sales growth priorities'}.`,
-    `${lead.title} involvement suggests ${lead.decisionPower >= 7 ? 'strong' : 'moderate'} buying authority.`,
-    `${money.format(lead.budget)} budget indicates ${
-      lead.budget >= 50000 ? 'enterprise' : lead.budget >= 15000 ? 'mid-market' : 'pilot-stage'
-    } buying capacity.`,
-  ];
+    `Recorded pain point: ${lead.painPoints}.`,
+    lead.title ? `Recorded role/title: ${lead.title}.` : '',
+    lead.budget > 0 ? `Recorded budget: ${money.format(lead.budget)}.` : '',
+    lead.source ? `Recorded source: ${lead.source}.` : '',
+  ].filter(Boolean);
 
   const risks = [
     lead.engagement < 6 ? 'Engagement is still developing; lead needs more education before a hard pitch.' : '',
@@ -38,7 +50,7 @@ export function analyzeLead(lead: LeadProfile): LeadAnalysis {
   return {
     score,
     temperature,
-    fitSummary: `${lead.company} is a ${temperature.toLowerCase()} ${lead.industry} opportunity in ${lead.region}. Focus the conversation on measurable revenue impact, faster qualification, and the specific pain around ${lead.painPoints.toLowerCase()}.`,
+    fitSummary: `${lead.company} is scored as a ${temperature.toLowerCase()} lead using only the fields entered in this workspace. Focus discovery on the recorded pain point: ${lead.painPoints}.`,
     buyingSignals,
     risks: risks.length ? risks : ['No critical blockers detected. Confirm timeline, procurement path, and success criteria.'],
     recommendedNextStep:
@@ -54,11 +66,18 @@ export function analyzeLead(lead: LeadProfile): LeadAnalysis {
 }
 
 export function generateOutreach(lead: LeadProfile, analysis = analyzeLead(lead)): OutreachSequence {
-  const outcome = lead.industry.toLowerCase().includes('retail')
-    ? 'increase conversion from every customer conversation'
-    : lead.industry.toLowerCase().includes('finance')
-      ? 'shorten compliant sales cycles'
-      : 'turn more qualified conversations into booked revenue';
+  if (!hasEnoughDataForAgent(lead)) {
+    return {
+      subject: 'Add verified lead details to generate outreach',
+      email: 'No outreach generated. Add a real lead name, company, and pain points first.',
+      linkedin: 'No LinkedIn message generated until lead details are provided.',
+      sms: 'No SMS generated until lead details are provided.',
+      callScript: 'No call script generated until lead details are provided.',
+      objections: ['No objection handling generated because there is not enough verified lead context.'],
+    };
+  }
+
+  const outcome = 'improve the sales workflow tied to the recorded pain point';
 
   const subject = `${lead.company} x AI sales lift: ${analysis.score}/100 opportunity`;
   const email = `Hi ${lead.name},
@@ -95,6 +114,10 @@ export function buildAgentResponse(lead: LeadProfile): AgentResponse {
 }
 
 export function answerSalesQuestion(question: string, lead: LeadProfile, history: ChatMessage[] = []): string {
+  if (!hasEnoughDataForAgent(lead)) {
+    return 'I need a real lead name, company, and pain points before I can answer without making things up.';
+  }
+
   const analysis = analyzeLead(lead);
   const lowerQuestion = question.toLowerCase();
   const contextHint = history.length > 1 ? 'Building on the current thread, ' : '';

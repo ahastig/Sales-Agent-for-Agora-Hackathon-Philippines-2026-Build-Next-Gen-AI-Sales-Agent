@@ -1,6 +1,8 @@
 # Agora AI Sales Agent
 
-A fully functional next-generation AI sales agent for lead qualification, outreach generation, objection handling, pipeline visibility, and sales coaching.
+A next-generation AI sales agent for lead qualification, outreach generation, objection handling, pipeline visibility, and sales coaching.
+
+The application does **not** include fabricated customers, sample companies, fake pipeline revenue, or seeded demo records. It starts empty and only works from data entered by the user or loaded from the connected backend database.
 
 Live GitHub Pages URL:
 
@@ -12,9 +14,10 @@ https://ahastig.github.io/Sales-Agent-for-Agora-Hackathon-Philippines-2026-Build
 - Lead scoring engine with buying signals, risks, CRM summary, and next-best action
 - Multi-channel outreach generator for email, LinkedIn, SMS, and calls
 - Sales copilot chat for coaching, objection handling, and next-step guidance
-- Pipeline board with weighted revenue metrics
-- Browser persistence through localStorage
+- Pipeline board with weighted revenue metrics from saved deals only
+- Browser draft persistence for local use
 - Express backend API for real deployments
+- SQLite database for leads, deals, and activities
 - Optional OpenAI-compatible model integration through environment variables
 - GitHub Actions workflow for GitHub Pages deployment
 
@@ -36,7 +39,31 @@ npm run server:dev
 
 The backend starts at `http://localhost:8787`.
 
-By default, the backend uses the deterministic local sales agent engine. To connect live AI, set:
+By default, the backend creates a SQLite database at `data/sales-agent.sqlite`. Override it with:
+
+```bash
+DATABASE_PATH=/absolute/path/to/sales-agent.sqlite
+```
+
+Core API endpoints:
+
+- `GET /api/workspace`
+- `GET /api/leads`
+- `POST /api/leads`
+- `PUT /api/leads/:id`
+- `DELETE /api/leads/:id`
+- `GET /api/deals`
+- `POST /api/deals`
+- `PUT /api/deals/:id`
+- `DELETE /api/deals/:id`
+- `GET /api/activities`
+- `POST /api/activities`
+- `PUT /api/activities/:id`
+- `DELETE /api/activities/:id`
+- `POST /api/agent/run`
+- `POST /api/agent/chat`
+
+By default, the AI layer uses deterministic local reasoning based only on fields provided by the user. To connect live AI, set:
 
 ```bash
 OPENAI_API_KEY=your-key
@@ -44,7 +71,7 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-Then paste the backend URL into the app's "Connect backend" panel.
+Then paste the backend URL into the app's Backend page and click **Load database**.
 
 ## Build
 

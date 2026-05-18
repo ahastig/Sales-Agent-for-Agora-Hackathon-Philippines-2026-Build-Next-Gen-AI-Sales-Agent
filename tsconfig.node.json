@@ -13,5 +13,12 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["vite.config.ts", "eslint.config.js", "backend/**/*.ts", "src/lib/aiEngine.ts", "src/types.ts"]
+  "include": [
+    "vite.config.ts",
+    "eslint.config.js",
+    "backend/**/*.ts",
+    "src/lib/aiEngine.ts",
+    "src/lib/records.ts",
+    "src/types.ts"
+  ]
 }

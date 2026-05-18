@@ -21,10 +21,16 @@ import {
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { answerSalesQuestion, buildAgentResponse } from './lib/aiEngine';
-import { requestAgentResponse, requestChatAnswer } from './lib/backendClient';
-import { sampleDeals } from './lib/sampleData';
-import { loadLead, loadSettings, saveLead, saveSettings } from './lib/storage';
-import type { AgentResponse, ChatMessage, DealStage, LeadProfile } from './types';
+import {
+  requestAgentResponse,
+  requestChatAnswer,
+  requestWorkspace,
+  saveDealToBackend,
+  saveLeadToBackend,
+} from './lib/backendClient';
+import { hasEnoughDataForAgent, hasLeadData } from './lib/records';
+import { loadDeals, loadLead, loadSettings, saveDeals, saveLead, saveSettings } from './lib/storage';
+import type { Activity as SalesActivity, AgentResponse, ChatMessage, Deal, DealStage, LeadProfile } from './types';
 
 const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -37,6 +43,18 @@ const pipelineStages: DealStage[] = ['Prospect', 'Qualified', 'Demo', 'Proposal'
 type AppPage = 'home' | 'lead' | 'outreach' | 'copilot' | 'pipeline' | 'backend';
 
 const pages: AppPage[] = ['home', 'lead', 'outreach', 'copilot', 'pipeline', 'backend'];
+
+function createEmptyDeal(): Deal {
+  return {
+    id: crypto.randomUUID(),
+    account: '',
+    owner: '',
+    value: 0,
+    stage: 'Prospect',
+    probability: 0,
+    nextStep: '',
+  };
+}
 
 function getPageFromHash(): AppPage {
   const hash = window.location.hash.replace(/^#\/?/, '') as AppPage;
@@ -114,6 +132,9 @@ function MetricCard({
 
 function App() {
   const [lead, setLead] = useState<LeadProfile>(() => loadLead());
+  const [deals, setDeals] = useState<Deal[]>(() => loadDeals());
+  const [activities, setActivities] = useState<SalesActivity[]>([]);
+  const [dealDraft, setDealDraft] = useState<Deal>(() => createEmptyDeal());
   const [settings, setSettings] = useState(() => loadSettings());
   const [agentResponse, setAgentResponse] = useState<AgentResponse>(() => buildAgentResponse(lead));
   const [activePage, setActivePage] = useState<AppPage>(() => getPageFromHash());
@@ -121,18 +142,17 @@ function App() {
     {
       id: 'welcome',
       role: 'assistant',
-      content:
-        'I am ready to qualify this lead, draft outreach, handle objections, and recommend the next best sales action.',
+      content: 'Add a real lead or connect the backend database. I will not invent customer details.',
     },
   ]);
   const [question, setQuestion] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState('Local AI engine ready');
 
-  const pipelineValue = useMemo(() => sampleDeals.reduce((sum, deal) => sum + deal.value, 0), []);
+  const pipelineValue = useMemo(() => deals.reduce((sum, deal) => sum + deal.value, 0), [deals]);
   const weightedPipeline = useMemo(
-    () => sampleDeals.reduce((sum, deal) => sum + deal.value * (deal.probability / 100), 0),
-    [],
+    () => deals.reduce((sum, deal) => sum + deal.value * (deal.probability / 100), 0),
+    [deals],
   );
 
   useEffect(() => {
@@ -153,7 +173,69 @@ function App() {
     setLead((current) => ({ ...current, [key]: value }));
   }
 
+  function updateDealDraft<K extends keyof Deal>(key: K, value: Deal[K]) {
+    setDealDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveCurrentLead() {
+    if (!hasLeadData(lead)) {
+      setStatus('Nothing saved: enter real lead details first');
+      return;
+    }
+
+    saveLead(lead);
+    if (settings.backendUrl) {
+      await saveLeadToBackend(settings.backendUrl, lead);
+      setStatus('Lead saved to backend database');
+      return;
+    }
+
+    setStatus('Lead saved in this browser. Connect backend for shared database persistence.');
+  }
+
+  async function loadBackendWorkspace() {
+    if (!settings.backendUrl) {
+      setStatus('Add a backend URL before loading database records');
+      return;
+    }
+
+    const workspace = await requestWorkspace(settings.backendUrl);
+    setDeals(workspace.deals);
+    setActivities(workspace.activities);
+    if (workspace.leads[0]) {
+      setLead(workspace.leads[0]);
+      saveLead(workspace.leads[0]);
+      setAgentResponse(buildAgentResponse(workspace.leads[0]));
+    }
+    saveDeals(workspace.deals);
+    setStatus(`Loaded ${workspace.leads.length} leads, ${workspace.deals.length} deals, and ${workspace.activities.length} activities`);
+  }
+
+  async function saveCurrentDeal() {
+    if (!dealDraft.account.trim()) {
+      setStatus('Deal not saved: account name is required');
+      return;
+    }
+
+    const nextDeals = [dealDraft, ...deals.filter((deal) => deal.id !== dealDraft.id)];
+    setDeals(nextDeals);
+    saveDeals(nextDeals);
+    if (settings.backendUrl) {
+      await saveDealToBackend(settings.backendUrl, dealDraft);
+      setStatus('Deal saved to backend database');
+    } else {
+      setStatus('Deal saved in this browser. Connect backend for shared database persistence.');
+    }
+    setDealDraft(createEmptyDeal());
+  }
+
   async function runAgent() {
+    if (!hasEnoughDataForAgent(lead)) {
+      setAgentResponse(buildAgentResponse(lead));
+      setStatus('Add a real lead name, company, and pain points before running the AI agent');
+      return;
+    }
+
     setIsRunning(true);
     setStatus(settings.backendUrl ? 'Calling backend AI agent...' : 'Running local AI agent...');
 
@@ -315,22 +397,27 @@ function App() {
               <MetricCard
                 icon={<Target />}
                 label="Current lead"
-                value={`${analysis.score}/100`}
-                caption={`${analysis.temperature} priority`}
+                value={hasLeadData(lead) ? lead.company || lead.name : 'No lead'}
+                caption={hasEnoughDataForAgent(lead) ? `${analysis.score}/100 ${analysis.temperature}` : 'Enter verified data'}
               />
               <MetricCard
                 icon={<TrendingUp />}
                 label="Weighted pipeline"
                 value={formatter.format(weightedPipeline)}
-                caption={`${sampleDeals.length} active opportunities`}
+                caption={`${deals.length} saved deals`}
               />
               <MetricCard
                 icon={<Zap />}
-                label="Automation queue"
-                value="18 tasks"
-                caption="Emails, calls, CRM updates"
+                label="Activities"
+                value={`${activities.length}`}
+                caption="Loaded from backend database"
               />
-              <MetricCard icon={<Users />} label="Buyer coverage" value="73%" caption="Stakeholders mapped" />
+              <MetricCard
+                icon={<Users />}
+                label="Data source"
+                value={settings.backendUrl ? 'Backend' : 'Browser'}
+                caption={settings.backendUrl ? 'SQLite API connected' : 'Connect backend for database'}
+              />
             </section>
 
             <section className="overview-actions">
@@ -367,7 +454,7 @@ function App() {
                   <span className="eyebrow">Lead command center</span>
                   <h2>Editable customer profile</h2>
                 </div>
-                <button className="ghost" onClick={() => saveLead(lead)}>
+                <button className="ghost" onClick={saveCurrentLead}>
                   <Save size={16} /> Save
                 </button>
               </div>
@@ -472,6 +559,13 @@ function App() {
               <Copy size={16} /> Copy email
             </button>
           </div>
+          {!hasEnoughDataForAgent(lead) ? (
+            <div className="empty-state">
+              <strong>No outreach generated</strong>
+              <p>Add a verified lead name, company, and pain points in Lead Studio first. The app will not invent a prospect.</p>
+            </div>
+          ) : (
+            <>
           <div className="channel-card">
             <Mail />
             <div>
@@ -503,6 +597,8 @@ function App() {
               <p key={objection}>{objection}</p>
             ))}
           </div>
+            </>
+          )}
             </article>
           </section>
         ) : null}
@@ -550,11 +646,53 @@ function App() {
             {formatter.format(pipelineValue)}
           </div>
         </div>
+        <div className="deal-form">
+          <Field
+            label="Account"
+            value={dealDraft.account}
+            onChange={(value) => updateDealDraft('account', value)}
+          />
+          <Field label="Owner" value={dealDraft.owner} onChange={(value) => updateDealDraft('owner', value)} />
+          <Field
+            label="Value"
+            value={dealDraft.value}
+            type="number"
+            onChange={(value) => updateDealDraft('value', Number(value))}
+          />
+          <label className="field">
+            <span>Stage</span>
+            <select value={dealDraft.stage} onChange={(event) => updateDealDraft('stage', event.target.value as DealStage)}>
+              {pipelineStages.map((stage) => (
+                <option key={stage} value={stage}>
+                  {stage}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Field
+            label="Probability"
+            value={dealDraft.probability}
+            type="number"
+            min={0}
+            max={100}
+            onChange={(value) => updateDealDraft('probability', Number(value))}
+          />
+          <Field label="Next step" value={dealDraft.nextStep} onChange={(value) => updateDealDraft('nextStep', value)} />
+          <button className="primary" onClick={saveCurrentDeal}>
+            <Save size={16} /> Save deal
+          </button>
+        </div>
+        {deals.length === 0 ? (
+          <div className="empty-state">
+            <strong>No deals saved yet</strong>
+            <p>Create a deal above or connect the backend database to load real pipeline records.</p>
+          </div>
+        ) : null}
         <div className="pipeline">
           {pipelineStages.map((stage) => (
             <div className="pipeline-stage" key={stage}>
               <h3>{stage}</h3>
-              {sampleDeals
+              {deals
                 .filter((deal) => deal.stage === stage)
                 .map((deal) => (
                   <article className="deal-card" key={deal.id}>
@@ -582,9 +720,8 @@ function App() {
           <Rocket />
         </div>
         <p>
-          GitHub Pages runs this app as a static site, so the browser uses the local AI engine by default. Run the
-          included Express backend anywhere Node can run, set an OpenAI-compatible API key if desired, and paste the
-          backend URL here.
+          The frontend never ships with customer records. Run the included Express backend to persist real leads,
+          deals, and activities in SQLite. Add an OpenAI-compatible API key only if you want live model calls.
         </p>
         <div className="settings-row">
           <Field
@@ -595,8 +732,12 @@ function App() {
           <button className="primary" onClick={saveCurrentSettings}>
             <Save size={16} /> Save settings
           </button>
+          <button className="secondary" onClick={loadBackendWorkspace} type="button">
+            <Rocket size={16} /> Load database
+          </button>
         </div>
         <code>npm run server:dev</code>
+        <code>DATABASE_PATH=data/sales-agent.sqlite</code>
           </section>
         ) : null}
       </section>
