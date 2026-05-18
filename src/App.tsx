@@ -19,7 +19,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { answerSalesQuestion, buildAgentResponse } from './lib/aiEngine';
 import { requestAgentResponse, requestChatAnswer } from './lib/backendClient';
 import { sampleDeals } from './lib/sampleData';
@@ -34,7 +34,14 @@ const formatter = new Intl.NumberFormat('en-US', {
 
 const pipelineStages: DealStage[] = ['Prospect', 'Qualified', 'Demo', 'Proposal', 'Negotiation'];
 
-type AppPage = 'overview' | 'lead' | 'outreach' | 'copilot' | 'pipeline' | 'backend';
+type AppPage = 'home' | 'lead' | 'outreach' | 'copilot' | 'pipeline' | 'backend';
+
+const pages: AppPage[] = ['home', 'lead', 'outreach', 'copilot', 'pipeline', 'backend'];
+
+function getPageFromHash(): AppPage {
+  const hash = window.location.hash.replace(/^#\/?/, '') as AppPage;
+  return pages.includes(hash) ? hash : 'home';
+}
 
 function Field({
   label,
@@ -109,7 +116,7 @@ function App() {
   const [lead, setLead] = useState<LeadProfile>(() => loadLead());
   const [settings, setSettings] = useState(() => loadSettings());
   const [agentResponse, setAgentResponse] = useState<AgentResponse>(() => buildAgentResponse(lead));
-  const [activePage, setActivePage] = useState<AppPage>('overview');
+  const [activePage, setActivePage] = useState<AppPage>(() => getPageFromHash());
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -127,6 +134,20 @@ function App() {
     () => sampleDeals.reduce((sum, deal) => sum + deal.value * (deal.probability / 100), 0),
     [],
   );
+
+  useEffect(() => {
+    const syncPageWithHash = () => setActivePage(getPageFromHash());
+    window.addEventListener('hashchange', syncPageWithHash);
+    if (!window.location.hash) {
+      window.history.replaceState(null, '', '#/home');
+    }
+    return () => window.removeEventListener('hashchange', syncPageWithHash);
+  }, []);
+
+  function navigateTo(page: AppPage) {
+    window.location.hash = `/${page}`;
+    setActivePage(page);
+  }
 
   function updateLead<K extends keyof LeadProfile>(key: K, value: LeadProfile[K]) {
     setLead((current) => ({ ...current, [key]: value }));
@@ -212,7 +233,7 @@ function App() {
   const analysis = agentResponse.analysis;
   const outreach = agentResponse.outreach;
   const navItems: Array<{ id: AppPage; label: string; icon: React.ReactNode }> = [
-    { id: 'overview', label: 'Overview', icon: <Sparkles size={18} /> },
+    { id: 'home', label: 'Home', icon: <Sparkles size={18} /> },
     { id: 'lead', label: 'Lead Studio', icon: <Target size={18} /> },
     { id: 'outreach', label: 'Outreach', icon: <Mail size={18} /> },
     { id: 'copilot', label: 'Copilot', icon: <Bot size={18} /> },
@@ -244,7 +265,7 @@ function App() {
               <button
                 className={`nav-item ${activePage === item.id ? 'active' : ''}`}
                 key={item.id}
-                onClick={() => setActivePage(item.id)}
+                onClick={() => navigateTo(item.id)}
                 type="button"
               >
                 {item.icon}
@@ -256,7 +277,7 @@ function App() {
       </aside>
 
       <section className="app-content">
-        {activePage === 'overview' ? (
+        {activePage === 'home' ? (
           <>
             <section className="hero">
               <div className="hero-grid">
@@ -266,16 +287,16 @@ function App() {
                   </span>
                   <h1>Qualify leads, generate outreach, and coach sales reps in one real workflow.</h1>
                   <p>
-                    Start with this executive view, then move through the focused tabs for lead data, outreach,
-                    copilot coaching, pipeline, and backend configuration.
+                    This is the home page. Use the sidebar to open each separate workspace instead of scrolling
+                    through one overloaded page.
                   </p>
-                  <span className="release-pill">App layout v3</span>
+                  <span className="release-pill">Real pages v4</span>
                   <div className="hero-actions">
                     <button className="primary" onClick={runAgent} disabled={isRunning}>
                       <Play size={18} />
                       {isRunning ? 'Running agent...' : 'Run AI agent'}
                     </button>
-                    <button className="secondary" onClick={() => setActivePage('lead')} type="button">
+                    <button className="secondary" onClick={() => navigateTo('lead')} type="button">
                       <Target size={18} />
                       Open Lead Studio
                     </button>
@@ -313,21 +334,21 @@ function App() {
             </section>
 
             <section className="overview-actions">
-              <button className="panel quick-action" onClick={() => setActivePage('outreach')} type="button">
+              <button className="panel quick-action" onClick={() => navigateTo('outreach')} type="button">
                 <Mail />
                 <span>
                   <strong>Review generated outreach</strong>
                   <small>Email, LinkedIn, SMS, call script, and objection handling.</small>
                 </span>
               </button>
-              <button className="panel quick-action" onClick={() => setActivePage('copilot')} type="button">
+              <button className="panel quick-action" onClick={() => navigateTo('copilot')} type="button">
                 <MessageSquareText />
                 <span>
                   <strong>Ask the sales copilot</strong>
                   <small>Get live coaching and next-step recommendations.</small>
                 </span>
               </button>
-              <button className="panel quick-action" onClick={() => setActivePage('pipeline')} type="button">
+              <button className="panel quick-action" onClick={() => navigateTo('pipeline')} type="button">
                 <BarChart3 />
                 <span>
                   <strong>Open pipeline board</strong>
