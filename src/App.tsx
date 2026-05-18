@@ -44,7 +44,6 @@ const pipelineStages: DealStage[] = ['Prospect', 'Qualified', 'Demo', 'Proposal'
 type AppPage = 'home' | 'lead' | 'outreach' | 'copilot' | 'pipeline' | 'backend';
 
 const pages: AppPage[] = ['home', 'lead', 'outreach', 'copilot', 'pipeline', 'backend'];
-const instructionsDismissedKey = 'agora-ai-sales-agent:instructions-dismissed-v1';
 
 function createEmptyDeal(): Deal {
   return {
@@ -61,10 +60,6 @@ function createEmptyDeal(): Deal {
 function getPageFromHash(): AppPage {
   const hash = window.location.hash.replace(/^#\/?/, '') as AppPage;
   return pages.includes(hash) ? hash : 'home';
-}
-
-function shouldShowInstructions() {
-  return window.localStorage.getItem(instructionsDismissedKey) !== 'true';
 }
 
 function Field({
@@ -154,7 +149,7 @@ function App() {
   const [question, setQuestion] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState('Local AI engine ready');
-  const [showInstructions, setShowInstructions] = useState(() => shouldShowInstructions());
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const pipelineValue = useMemo(() => deals.reduce((sum, deal) => sum + deal.value, 0), [deals]);
   const weightedPipeline = useMemo(
@@ -176,10 +171,7 @@ function App() {
     setActivePage(page);
   }
 
-  function closeInstructions(rememberChoice = false) {
-    if (rememberChoice) {
-      window.localStorage.setItem(instructionsDismissedKey, 'true');
-    }
+  function closeInstructions() {
     setShowInstructions(false);
   }
 
@@ -815,8 +807,8 @@ function App() {
               >
                 Go to Lead Studio
               </button>
-              <button className="primary" onClick={() => closeInstructions(true)} type="button">
-                Got it, do not show again
+              <button className="primary" onClick={() => closeInstructions()} type="button">
+                Got it
               </button>
             </div>
           </section>
