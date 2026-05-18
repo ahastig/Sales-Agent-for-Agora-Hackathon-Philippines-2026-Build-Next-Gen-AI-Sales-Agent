@@ -238,6 +238,7 @@ function App() {
               This app combines a deployable sales cockpit, deterministic AI fallback, and an optional Express
               backend that can connect to an OpenAI-compatible model for production use.
             </p>
+            <span className="release-pill">Live Pages build v2</span>
             <div className="hero-actions">
               <button className="primary" onClick={runAgent} disabled={isRunning}>
                 <Play size={18} />
