@@ -5,6 +5,7 @@ import {
   BrainCircuit,
   CheckCircle2,
   Copy,
+  HelpCircle,
   Mail,
   MessageSquareText,
   PhoneCall,
@@ -43,6 +44,7 @@ const pipelineStages: DealStage[] = ['Prospect', 'Qualified', 'Demo', 'Proposal'
 type AppPage = 'home' | 'lead' | 'outreach' | 'copilot' | 'pipeline' | 'backend';
 
 const pages: AppPage[] = ['home', 'lead', 'outreach', 'copilot', 'pipeline', 'backend'];
+const instructionsDismissedKey = 'agora-ai-sales-agent:instructions-dismissed-v1';
 
 function createEmptyDeal(): Deal {
   return {
@@ -59,6 +61,10 @@ function createEmptyDeal(): Deal {
 function getPageFromHash(): AppPage {
   const hash = window.location.hash.replace(/^#\/?/, '') as AppPage;
   return pages.includes(hash) ? hash : 'home';
+}
+
+function shouldShowInstructions() {
+  return window.localStorage.getItem(instructionsDismissedKey) !== 'true';
 }
 
 function Field({
@@ -148,6 +154,7 @@ function App() {
   const [question, setQuestion] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState('Local AI engine ready');
+  const [showInstructions, setShowInstructions] = useState(() => shouldShowInstructions());
 
   const pipelineValue = useMemo(() => deals.reduce((sum, deal) => sum + deal.value, 0), [deals]);
   const weightedPipeline = useMemo(
@@ -167,6 +174,13 @@ function App() {
   function navigateTo(page: AppPage) {
     window.location.hash = `/${page}`;
     setActivePage(page);
+  }
+
+  function closeInstructions(rememberChoice = false) {
+    if (rememberChoice) {
+      window.localStorage.setItem(instructionsDismissedKey, 'true');
+    }
+    setShowInstructions(false);
   }
 
   function updateLead<K extends keyof LeadProfile>(key: K, value: LeadProfile[K]) {
@@ -355,6 +369,11 @@ function App() {
               </button>
             ))}
           </nav>
+
+          <button className="help-button" onClick={() => setShowInstructions(true)} type="button">
+            <HelpCircle size={18} />
+            How to use this app
+          </button>
         </div>
       </aside>
 
@@ -741,6 +760,68 @@ function App() {
           </section>
         ) : null}
       </section>
+
+      {showInstructions ? (
+        <div className="modal-backdrop" role="presentation">
+          <section className="instruction-modal" aria-labelledby="instruction-title" aria-modal="true" role="dialog">
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow">
+                  <HelpCircle size={16} /> Quick start guide
+                </span>
+                <h2 id="instruction-title">How to use the AI Sales Agent</h2>
+              </div>
+              <button className="ghost" onClick={() => closeInstructions()} type="button">
+                Close
+              </button>
+            </div>
+
+            <ol className="instruction-steps">
+              <li>
+                <strong>Start on Lead Studio.</strong>
+                Enter a real lead name, company, and pain points. The app starts empty and does not include fake
+                customers.
+              </li>
+              <li>
+                <strong>Save your data.</strong>
+                Without a backend URL, records save only in this browser. For a real shared database, run the backend
+                API and add its URL on the Backend page.
+              </li>
+              <li>
+                <strong>Run the AI agent.</strong>
+                After required lead fields are filled, click Run AI Agent to score the lead and create recommendations
+                from only the data you provided.
+              </li>
+              <li>
+                <strong>Use the focused pages.</strong>
+                Outreach creates messages, Copilot answers sales questions, Pipeline stores deals, and Backend connects
+                the SQLite API.
+              </li>
+            </ol>
+
+            <div className="instruction-note">
+              <strong>Important:</strong> GitHub Pages hosts only the frontend. To persist shared real data, deploy or
+              run the included Express + SQLite backend and connect it from the Backend page.
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="secondary"
+                onClick={() => {
+                  navigateTo('lead');
+                  closeInstructions();
+                }}
+                type="button"
+              >
+                Go to Lead Studio
+              </button>
+              <button className="primary" onClick={() => closeInstructions(true)} type="button">
+                Got it, do not show again
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
