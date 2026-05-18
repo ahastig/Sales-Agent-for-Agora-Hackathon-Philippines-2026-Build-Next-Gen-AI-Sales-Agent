@@ -7,6 +7,8 @@ import {
   deleteActivity,
   deleteDeal,
   deleteLead,
+  getStoreInfo,
+  initializeDatabase,
   listActivities,
   listDeals,
   listLeads,
@@ -68,94 +70,124 @@ app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? true }));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (_request, response) => {
+  const store = getStoreInfo();
   response.json({
     ok: true,
     mode: process.env.OPENAI_API_KEY ? 'openai-compatible' : 'local-fallback',
-    database: process.env.DATABASE_PATH ?? 'data/sales-agent.sqlite',
+    database: store.database,
+    store: store.mode,
   });
 });
 
-app.get('/api/workspace', (_request, response) => {
-  response.json({
-    leads: listLeads(),
-    deals: listDeals(),
-    activities: listActivities(),
-  });
-});
-
-app.get('/api/leads', (_request, response) => {
-  response.json(listLeads());
-});
-
-app.post('/api/leads', (request, response, next) => {
+app.get('/api/workspace', async (_request, response, next) => {
   try {
-    response.status(201).json(upsertLead(leadSchema.parse(request.body)));
+    response.json({
+      leads: await listLeads(),
+      deals: await listDeals(),
+      activities: await listActivities(),
+    });
   } catch (error) {
     next(error);
   }
 });
 
-app.put('/api/leads/:id', (request, response, next) => {
+app.get('/api/leads', async (_request, response, next) => {
   try {
-    response.json(upsertLead(leadSchema.parse({ ...request.body, id: request.params.id })));
+    response.json(await listLeads());
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/leads/:id', (request, response) => {
-  deleteLead(request.params.id);
-  response.status(204).send();
-});
-
-app.get('/api/deals', (_request, response) => {
-  response.json(listDeals());
-});
-
-app.post('/api/deals', (request, response, next) => {
+app.post('/api/leads', async (request, response, next) => {
   try {
-    response.status(201).json(upsertDeal(dealSchema.parse(request.body)));
+    response.status(201).json(await upsertLead(leadSchema.parse(request.body)));
   } catch (error) {
     next(error);
   }
 });
 
-app.put('/api/deals/:id', (request, response, next) => {
+app.put('/api/leads/:id', async (request, response, next) => {
   try {
-    response.json(upsertDeal(dealSchema.parse({ ...request.body, id: request.params.id })));
+    response.json(await upsertLead(leadSchema.parse({ ...request.body, id: request.params.id })));
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/deals/:id', (request, response) => {
-  deleteDeal(request.params.id);
-  response.status(204).send();
-});
-
-app.get('/api/activities', (_request, response) => {
-  response.json(listActivities());
-});
-
-app.post('/api/activities', (request, response, next) => {
+app.delete('/api/leads/:id', async (request, response, next) => {
   try {
-    response.status(201).json(upsertActivity(activitySchema.parse(request.body)));
+    await deleteLead(request.params.id);
+    response.status(204).send();
   } catch (error) {
     next(error);
   }
 });
 
-app.put('/api/activities/:id', (request, response, next) => {
+app.get('/api/deals', async (_request, response, next) => {
   try {
-    response.json(upsertActivity(activitySchema.parse({ ...request.body, id: request.params.id })));
+    response.json(await listDeals());
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/activities/:id', (request, response) => {
-  deleteActivity(request.params.id);
-  response.status(204).send();
+app.post('/api/deals', async (request, response, next) => {
+  try {
+    response.status(201).json(await upsertDeal(dealSchema.parse(request.body)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/deals/:id', async (request, response, next) => {
+  try {
+    response.json(await upsertDeal(dealSchema.parse({ ...request.body, id: request.params.id })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/deals/:id', async (request, response, next) => {
+  try {
+    await deleteDeal(request.params.id);
+    response.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/activities', async (_request, response, next) => {
+  try {
+    response.json(await listActivities());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/activities', async (request, response, next) => {
+  try {
+    response.status(201).json(await upsertActivity(activitySchema.parse(request.body)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/activities/:id', async (request, response, next) => {
+  try {
+    response.json(await upsertActivity(activitySchema.parse({ ...request.body, id: request.params.id })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/activities/:id', async (request, response, next) => {
+  try {
+    await deleteActivity(request.params.id);
+    response.status(204).send();
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post('/api/agent/run', async (request, response, next) => {
@@ -193,6 +225,14 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
   });
 });
 
-app.listen(port, () => {
-  console.log(`Agora AI Sales Agent API listening on http://localhost:${port}`);
-});
+initializeDatabase()
+  .then(() => {
+    app.listen(port, () => {
+      const store = getStoreInfo();
+      console.log(`Agora AI Sales Agent API listening on http://localhost:${port} using ${store.mode}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Failed to initialize database', error);
+    process.exit(1);
+  });

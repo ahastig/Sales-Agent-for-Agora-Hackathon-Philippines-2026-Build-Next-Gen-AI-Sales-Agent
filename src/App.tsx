@@ -427,7 +427,7 @@ function App() {
                 icon={<Users />}
                 label="Data source"
                 value={settings.backendUrl ? 'Backend' : 'Browser'}
-                caption={settings.backendUrl ? 'SQLite API connected' : 'Connect backend for database'}
+                caption={settings.backendUrl ? 'Database API connected' : 'Connect backend for database'}
               />
             </section>
 
@@ -731,8 +731,9 @@ function App() {
           <Rocket />
         </div>
         <p>
-          The frontend never ships with customer records. Run the included Express backend to persist real leads,
-          deals, and activities in SQLite. Add an OpenAI-compatible API key only if you want live model calls.
+          The frontend never ships with customer records. Deploy the included Express backend to persist real leads,
+          deals, and activities in PostgreSQL, or run it locally with SQLite. Add an OpenAI-compatible API key only if
+          you want live model calls.
         </p>
         <div className="settings-row">
           <Field
@@ -748,6 +749,7 @@ function App() {
           </button>
         </div>
         <code>npm run server:dev</code>
+        <code>DATABASE_URL=postgresql://...</code>
         <code>DATABASE_PATH=data/sales-agent.sqlite</code>
           </section>
         ) : null}
@@ -787,13 +789,14 @@ function App() {
               <li>
                 <strong>Use the focused pages.</strong>
                 Outreach creates messages, Copilot answers sales questions, Pipeline stores deals, and Backend connects
-                the SQLite API.
+                the database API.
               </li>
             </ol>
 
             <div className="instruction-note">
-              <strong>Important:</strong> GitHub Pages hosts only the frontend. To persist shared real data, deploy or
-              run the included Express + SQLite backend and connect it from the Backend page.
+              <strong>Important:</strong> GitHub Pages hosts only the frontend. To persist shared real data, deploy the
+              included Express backend with PostgreSQL or run it locally with SQLite, then connect it from the Backend
+              page.
             </div>
 
             <div className="modal-actions">

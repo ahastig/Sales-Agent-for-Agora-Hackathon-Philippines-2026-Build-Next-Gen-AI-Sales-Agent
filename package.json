@@ -10,6 +10,7 @@
     "deploy:pages": "npm run build:pages && gh-pages -d dist -b gh-pages -m \"Deploy AI sales agent to GitHub Pages\"",
     "preview": "vite preview --host 0.0.0.0",
     "server:dev": "tsx backend/server.ts",
+    "server:start": "tsx backend/server.ts",
     "check": "eslint . && tsc -b"
   },
   "repository": {
@@ -36,8 +37,10 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "lucide-react": "^1.16.0",
+    "pg": "^8.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "tsx": "^4.22.2",
     "vite": "^8.0.13",
     "zod": "^4.4.3"
   },
@@ -47,12 +50,12 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.0",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^10.4.0",
     "gh-pages": "^6.3.0",
     "globals": "^17.6.0",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4"
   }

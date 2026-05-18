@@ -17,7 +17,8 @@ https://ahastig.github.io/Sales-Agent-for-Agora-Hackathon-Philippines-2026-Build
 - Pipeline board with weighted revenue metrics from saved deals only
 - Browser draft persistence for local use
 - Express backend API for real deployments
-- SQLite database for leads, deals, and activities
+- PostgreSQL database for production deployments
+- SQLite database for local development
 - Optional OpenAI-compatible model integration through environment variables
 - GitHub Actions workflow for GitHub Pages deployment
 
@@ -39,10 +40,11 @@ npm run server:dev
 
 The backend starts at `http://localhost:8787`.
 
-By default, the backend creates a SQLite database at `data/sales-agent.sqlite`. Override it with:
+By default, the backend creates a SQLite database at `data/sales-agent.sqlite`. For production, set `DATABASE_URL` to a PostgreSQL connection string from Neon, Supabase, Render, or another Postgres provider.
 
 ```bash
 DATABASE_PATH=/absolute/path/to/sales-agent.sqlite
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
 ```
 
 Core API endpoints:
@@ -90,6 +92,8 @@ npm run build:pages
 ## Deployment
 
 The repository includes `.github/workflows/deploy.yml`, which builds and deploys the static frontend to GitHub Pages on pushes to `main` and the feature branch used for this implementation. The frontend works on GitHub Pages without a server by using the local AI engine; the backend can be deployed separately to any Node-compatible host.
+
+Backend deployment config is included in `render.yaml`. See `DEPLOYMENT.md` for the Render + free PostgreSQL setup.
 
 If this is the repository's first Pages deployment, enable GitHub Pages once in repository settings:
 
