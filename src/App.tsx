@@ -34,6 +34,8 @@ const formatter = new Intl.NumberFormat('en-US', {
 
 const pipelineStages: DealStage[] = ['Prospect', 'Qualified', 'Demo', 'Proposal', 'Negotiation'];
 
+type AppPage = 'overview' | 'lead' | 'outreach' | 'copilot' | 'pipeline' | 'backend';
+
 function Field({
   label,
   value,
@@ -107,6 +109,7 @@ function App() {
   const [lead, setLead] = useState<LeadProfile>(() => loadLead());
   const [settings, setSettings] = useState(() => loadSettings());
   const [agentResponse, setAgentResponse] = useState<AgentResponse>(() => buildAgentResponse(lead));
+  const [activePage, setActivePage] = useState<AppPage>('overview');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -208,11 +211,19 @@ function App() {
 
   const analysis = agentResponse.analysis;
   const outreach = agentResponse.outreach;
+  const navItems: Array<{ id: AppPage; label: string; icon: React.ReactNode }> = [
+    { id: 'overview', label: 'Overview', icon: <Sparkles size={18} /> },
+    { id: 'lead', label: 'Lead Studio', icon: <Target size={18} /> },
+    { id: 'outreach', label: 'Outreach', icon: <Mail size={18} /> },
+    { id: 'copilot', label: 'Copilot', icon: <Bot size={18} /> },
+    { id: 'pipeline', label: 'Pipeline', icon: <BarChart3 size={18} /> },
+    { id: 'backend', label: 'Backend', icon: <Settings size={18} /> },
+  ];
 
   return (
-    <main>
-      <section className="hero">
-        <nav className="topbar">
+    <main className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-inner">
           <div className="brand">
             <span className="brand-mark">
               <Bot size={24} />
@@ -222,166 +233,215 @@ function App() {
               <small>Lead intelligence + autonomous outreach</small>
             </div>
           </div>
+
           <div className="status-pill">
             <Activity size={16} />
             {status}
           </div>
-        </nav>
 
-        <div className="hero-grid">
-          <div className="hero-copy">
-            <span className="eyebrow">
-              <Sparkles size={16} /> Next Gen AI Sales Agent
-            </span>
-            <h1>Qualify leads, generate outreach, and coach sales reps in one real workflow.</h1>
-            <p>
-              This app combines a deployable sales cockpit, deterministic AI fallback, and an optional Express
-              backend that can connect to an OpenAI-compatible model for production use.
-            </p>
-            <span className="release-pill">Live Pages build v2</span>
-            <div className="hero-actions">
-              <button className="primary" onClick={runAgent} disabled={isRunning}>
-                <Play size={18} />
-                {isRunning ? 'Running agent...' : 'Run AI agent'}
+          <nav className="app-nav" aria-label="Application sections">
+            {navItems.map((item) => (
+              <button
+                className={`nav-item ${activePage === item.id ? 'active' : ''}`}
+                key={item.id}
+                onClick={() => setActivePage(item.id)}
+                type="button"
+              >
+                {item.icon}
+                {item.label}
               </button>
-              <a className="secondary" href="#backend">
-                <Settings size={18} />
-                Connect backend
-              </a>
-            </div>
-          </div>
-
-          <div className="score-orb">
-            <span>Lead Score</span>
-            <strong>{analysis.score}</strong>
-            <em>{analysis.temperature}</em>
-          </div>
+            ))}
+          </nav>
         </div>
-      </section>
+      </aside>
 
-      <section className="metrics">
-        <MetricCard
-          icon={<Target />}
-          label="Current lead"
-          value={`${analysis.score}/100`}
-          caption={`${analysis.temperature} priority`}
-        />
-        <MetricCard
-          icon={<TrendingUp />}
-          label="Weighted pipeline"
-          value={formatter.format(weightedPipeline)}
-          caption={`${sampleDeals.length} active opportunities`}
-        />
-        <MetricCard
-          icon={<Zap />}
-          label="Automation queue"
-          value="18 tasks"
-          caption="Emails, calls, CRM updates"
-        />
-        <MetricCard icon={<Users />} label="Buyer coverage" value="73%" caption="Stakeholders mapped" />
-      </section>
+      <section className="app-content">
+        {activePage === 'overview' ? (
+          <>
+            <section className="hero">
+              <div className="hero-grid">
+                <div className="hero-copy">
+                  <span className="eyebrow">
+                    <Sparkles size={16} /> Next Gen AI Sales Agent
+                  </span>
+                  <h1>Qualify leads, generate outreach, and coach sales reps in one real workflow.</h1>
+                  <p>
+                    Start with this executive view, then move through the focused tabs for lead data, outreach,
+                    copilot coaching, pipeline, and backend configuration.
+                  </p>
+                  <span className="release-pill">App layout v3</span>
+                  <div className="hero-actions">
+                    <button className="primary" onClick={runAgent} disabled={isRunning}>
+                      <Play size={18} />
+                      {isRunning ? 'Running agent...' : 'Run AI agent'}
+                    </button>
+                    <button className="secondary" onClick={() => setActivePage('lead')} type="button">
+                      <Target size={18} />
+                      Open Lead Studio
+                    </button>
+                  </div>
+                </div>
 
-      <section className="workspace">
-        <article className="panel lead-panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">Lead command center</span>
-              <h2>Editable customer profile</h2>
-            </div>
-            <button className="ghost" onClick={() => saveLead(lead)}>
-              <Save size={16} /> Save
-            </button>
-          </div>
+                <div className="score-orb">
+                  <span>Lead Score</span>
+                  <strong>{analysis.score}</strong>
+                  <em>{analysis.temperature}</em>
+                </div>
+              </div>
+            </section>
 
-          <div className="form-grid">
-            <Field label="Name" value={lead.name} onChange={(value) => updateLead('name', value)} />
-            <Field label="Title" value={lead.title} onChange={(value) => updateLead('title', value)} />
-            <Field label="Company" value={lead.company} onChange={(value) => updateLead('company', value)} />
-            <Field label="Industry" value={lead.industry} onChange={(value) => updateLead('industry', value)} />
-            <Field
-              label="Company size"
-              value={lead.companySize}
-              onChange={(value) => updateLead('companySize', value)}
-            />
-            <Field label="Region" value={lead.region} onChange={(value) => updateLead('region', value)} />
-            <Field label="Email" value={lead.email} onChange={(value) => updateLead('email', value)} />
-            <Field label="Phone" value={lead.phone} onChange={(value) => updateLead('phone', value)} />
-            <Field label="Source" value={lead.source} onChange={(value) => updateLead('source', value)} />
-            <Field
-              label="Budget"
-              value={lead.budget}
-              type="number"
-              onChange={(value) => updateLead('budget', Number(value))}
-            />
-            <Field
-              label="Urgency"
-              value={lead.urgency}
-              type="number"
-              min={1}
-              max={10}
-              onChange={(value) => updateLead('urgency', Number(value))}
-            />
-            <Field
-              label="Decision power"
-              value={lead.decisionPower}
-              type="number"
-              min={1}
-              max={10}
-              onChange={(value) => updateLead('decisionPower', Number(value))}
-            />
-            <Field
-              label="Engagement"
-              value={lead.engagement}
-              type="number"
-              min={1}
-              max={10}
-              onChange={(value) => updateLead('engagement', Number(value))}
-            />
-            <TextArea
-              label="Pain points"
-              value={lead.painPoints}
-              onChange={(value) => updateLead('painPoints', value)}
-            />
-            <TextArea label="Notes" value={lead.notes} onChange={(value) => updateLead('notes', value)} />
-          </div>
-        </article>
+            <section className="metrics">
+              <MetricCard
+                icon={<Target />}
+                label="Current lead"
+                value={`${analysis.score}/100`}
+                caption={`${analysis.temperature} priority`}
+              />
+              <MetricCard
+                icon={<TrendingUp />}
+                label="Weighted pipeline"
+                value={formatter.format(weightedPipeline)}
+                caption={`${sampleDeals.length} active opportunities`}
+              />
+              <MetricCard
+                icon={<Zap />}
+                label="Automation queue"
+                value="18 tasks"
+                caption="Emails, calls, CRM updates"
+              />
+              <MetricCard icon={<Users />} label="Buyer coverage" value="73%" caption="Stakeholders mapped" />
+            </section>
 
-        <aside className="panel intelligence-panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">AI intelligence</span>
-              <h2>Recommendation engine</h2>
-            </div>
-            <BrainCircuit />
-          </div>
-          <p>{analysis.fitSummary}</p>
-          <div className="insight-block">
-            <h3>Buying signals</h3>
-            <ul>
-              {analysis.buyingSignals.map((signal) => (
-                <li key={signal}>
-                  <CheckCircle2 size={16} /> {signal}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="insight-block risk">
-            <h3>Risks to manage</h3>
-            <ul>
-              {analysis.risks.map((risk) => (
-                <li key={risk}>{risk}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="next-step">
-            <span>Next best action</span>
-            <strong>{analysis.recommendedNextStep}</strong>
-          </div>
-        </aside>
-      </section>
+            <section className="overview-actions">
+              <button className="panel quick-action" onClick={() => setActivePage('outreach')} type="button">
+                <Mail />
+                <span>
+                  <strong>Review generated outreach</strong>
+                  <small>Email, LinkedIn, SMS, call script, and objection handling.</small>
+                </span>
+              </button>
+              <button className="panel quick-action" onClick={() => setActivePage('copilot')} type="button">
+                <MessageSquareText />
+                <span>
+                  <strong>Ask the sales copilot</strong>
+                  <small>Get live coaching and next-step recommendations.</small>
+                </span>
+              </button>
+              <button className="panel quick-action" onClick={() => setActivePage('pipeline')} type="button">
+                <BarChart3 />
+                <span>
+                  <strong>Open pipeline board</strong>
+                  <small>See active deals and weighted revenue.</small>
+                </span>
+              </button>
+            </section>
+          </>
+        ) : null}
 
-      <section className="two-column">
-        <article className="panel">
+        {activePage === 'lead' ? (
+          <section className="workspace page-grid">
+            <article className="panel lead-panel">
+              <div className="panel-header">
+                <div>
+                  <span className="eyebrow">Lead command center</span>
+                  <h2>Editable customer profile</h2>
+                </div>
+                <button className="ghost" onClick={() => saveLead(lead)}>
+                  <Save size={16} /> Save
+                </button>
+              </div>
+
+              <div className="form-grid">
+                <Field label="Name" value={lead.name} onChange={(value) => updateLead('name', value)} />
+                <Field label="Title" value={lead.title} onChange={(value) => updateLead('title', value)} />
+                <Field label="Company" value={lead.company} onChange={(value) => updateLead('company', value)} />
+                <Field label="Industry" value={lead.industry} onChange={(value) => updateLead('industry', value)} />
+                <Field
+                  label="Company size"
+                  value={lead.companySize}
+                  onChange={(value) => updateLead('companySize', value)}
+                />
+                <Field label="Region" value={lead.region} onChange={(value) => updateLead('region', value)} />
+                <Field label="Email" value={lead.email} onChange={(value) => updateLead('email', value)} />
+                <Field label="Phone" value={lead.phone} onChange={(value) => updateLead('phone', value)} />
+                <Field label="Source" value={lead.source} onChange={(value) => updateLead('source', value)} />
+                <Field
+                  label="Budget"
+                  value={lead.budget}
+                  type="number"
+                  onChange={(value) => updateLead('budget', Number(value))}
+                />
+                <Field
+                  label="Urgency"
+                  value={lead.urgency}
+                  type="number"
+                  min={1}
+                  max={10}
+                  onChange={(value) => updateLead('urgency', Number(value))}
+                />
+                <Field
+                  label="Decision power"
+                  value={lead.decisionPower}
+                  type="number"
+                  min={1}
+                  max={10}
+                  onChange={(value) => updateLead('decisionPower', Number(value))}
+                />
+                <Field
+                  label="Engagement"
+                  value={lead.engagement}
+                  type="number"
+                  min={1}
+                  max={10}
+                  onChange={(value) => updateLead('engagement', Number(value))}
+                />
+                <TextArea
+                  label="Pain points"
+                  value={lead.painPoints}
+                  onChange={(value) => updateLead('painPoints', value)}
+                />
+                <TextArea label="Notes" value={lead.notes} onChange={(value) => updateLead('notes', value)} />
+              </div>
+            </article>
+
+            <aside className="panel intelligence-panel">
+              <div className="panel-header">
+                <div>
+                  <span className="eyebrow">AI intelligence</span>
+                  <h2>Recommendation engine</h2>
+                </div>
+                <BrainCircuit />
+              </div>
+              <p>{analysis.fitSummary}</p>
+              <div className="insight-block">
+                <h3>Buying signals</h3>
+                <ul>
+                  {analysis.buyingSignals.map((signal) => (
+                    <li key={signal}>
+                      <CheckCircle2 size={16} /> {signal}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="insight-block risk">
+                <h3>Risks to manage</h3>
+                <ul>
+                  {analysis.risks.map((risk) => (
+                    <li key={risk}>{risk}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="next-step">
+                <span>Next best action</span>
+                <strong>{analysis.recommendedNextStep}</strong>
+              </div>
+            </aside>
+          </section>
+        ) : null}
+
+        {activePage === 'outreach' ? (
+          <section className="page-single">
+            <article className="panel">
           <div className="panel-header">
             <div>
               <span className="eyebrow">Autonomous outreach</span>
@@ -422,9 +482,13 @@ function App() {
               <p key={objection}>{objection}</p>
             ))}
           </div>
-        </article>
+            </article>
+          </section>
+        ) : null}
 
-        <article className="panel chat-panel">
+        {activePage === 'copilot' ? (
+          <section className="page-single">
+            <article className="panel chat-panel">
           <div className="panel-header">
             <div>
               <span className="eyebrow">Sales copilot</span>
@@ -449,10 +513,12 @@ function App() {
               <Send size={16} /> Ask
             </button>
           </form>
-        </article>
-      </section>
+            </article>
+          </section>
+        ) : null}
 
-      <section className="panel">
+        {activePage === 'pipeline' ? (
+          <section className="panel page-single">
         <div className="panel-header">
           <div>
             <span className="eyebrow">Revenue operations</span>
@@ -482,9 +548,11 @@ function App() {
             </div>
           ))}
         </div>
-      </section>
+          </section>
+        ) : null}
 
-      <section className="panel backend-panel" id="backend">
+        {activePage === 'backend' ? (
+          <section className="panel backend-panel page-single">
         <div className="panel-header">
           <div>
             <span className="eyebrow">Production backend</span>
@@ -508,6 +576,8 @@ function App() {
           </button>
         </div>
         <code>npm run server:dev</code>
+          </section>
+        ) : null}
       </section>
     </main>
   );
